@@ -176,6 +176,20 @@ static struct miscdevice sgx_dev_alt = {
 	.mode   = 0666,
 };
 
+static bool has_flc(void)
+{
+	unsigned int eax, ebx, ecx, edx;
+	cpuid(7, &eax, &ebx, &ecx, &edx);
+	return (ecx >> 30) == 0x1;
+}
+
+static struct miscdevice *sgx_device(void) {
+	if (sgx_dev_alt_name || has_flc())
+		return &sgx_dev_alt;
+	else
+		return &sgx_dev;
+}
+
 static int sgx_pm_suspend(struct device *dev)
 {
 	struct sgx_tgid_ctx *ctx;
@@ -203,13 +217,6 @@ void sgx_reset_pubkey_hash(void *failed)
 
 static SIMPLE_DEV_PM_OPS(sgx_drv_pm, sgx_pm_suspend, NULL);
 
-static bool has_flc(void)
-{
-	unsigned int eax, ebx, ecx, edx;
-	cpuid(7, &eax, &ebx, &ecx, &edx);
-	return (ecx >> 30) == 0x1;
-}
-
 static int sgx_dev_init(struct device *parent)
 {
 	unsigned int eax, ebx, ecx, edx;
@@ -218,6 +225,7 @@ static int sgx_dev_init(struct device *parent)
 	int ret;
 	int i;
 	int msr_reset_failed = 0;
+	struct miscdevice *dev = sgx_device();
 
 	pr_info("intel_sgx: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
 
@@ -289,8 +297,8 @@ static int sgx_dev_init(struct device *parent)
 		goto out_page_cache;
 	}
 
-	sgx_dev.parent = parent;
-	ret = misc_register(sgx_dev_alt_name || has_flc() ? &sgx_dev_alt : &sgx_dev);
+	dev->parent = parent;
+	ret = misc_register(dev);
 	if (ret) {
 		pr_err("intel_sgx: misc_register() failed\n");
 		goto out_workqueue;
@@ -372,7 +380,7 @@ static int sgx_drv_remove(struct platform_device *pdev)
 		return 0;
 	}
 
-	misc_deregister(&sgx_dev);
+	misc_deregister(sgx_device());
 
 	destroy_workqueue(sgx_add_page_wq);
 #ifdef CONFIG_X86_64
