@@ -203,6 +203,13 @@ void sgx_reset_pubkey_hash(void *failed)
 
 static SIMPLE_DEV_PM_OPS(sgx_drv_pm, sgx_pm_suspend, NULL);
 
+static bool has_flc(void)
+{
+	unsigned int eax, ebx, ecx, edx;
+	cpuid(7, &eax, &ebx, &ecx, &edx);
+	return (ecx >> 30) == 0x1;
+}
+
 static int sgx_dev_init(struct device *parent)
 {
 	unsigned int eax, ebx, ecx, edx;
@@ -283,7 +290,7 @@ static int sgx_dev_init(struct device *parent)
 	}
 
 	sgx_dev.parent = parent;
-	ret = misc_register(sgx_dev_alt_name ? &sgx_dev_alt : &sgx_dev);
+	ret = misc_register(sgx_dev_alt_name || has_flc() ? &sgx_dev_alt : &sgx_dev);
 	if (ret) {
 		pr_err("intel_sgx: misc_register() failed\n");
 		goto out_workqueue;
