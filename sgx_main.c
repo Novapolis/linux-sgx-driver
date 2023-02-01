@@ -71,8 +71,8 @@
 #include <linux/kthread.h>
 #include <linux/platform_device.h>
 
-#define DRV_DESCRIPTION "Intel SGX Driver"
-#define DRV_VERSION "2.11.0"
+#define DRV_DESCRIPTION "Fortanix Intel SGX Driver"
+#define DRV_VERSION "2.12.0"
 
 #ifndef MSR_IA32_FEAT_CTL
 #define MSR_IA32_FEAT_CTL MSR_IA32_FEATURE_CONTROL
